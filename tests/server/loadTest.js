@@ -86,6 +86,23 @@ describe ('It should test bundle itself', () => {
 		console.log(out);
 	});
 	
+	it ('It should test starts with key', () => {
+		let sfo = new SearchFilterOptions();
+		let out = sfo.parse(':email sypachev_s_s@mail.ru');
+		chai.expect(out.extra).to.equal('');
+		chai.expect(out.data).to.have.property('email');
+		console.log(out);
+		out = sfo.parse(':id 123');
+		console.log(out);
+		chai.expect(out.data).to.have.property('id');
+		out = sfo.parse('  :key1 val1  :key2  val2');
+		chai.expect(out.extra).to.equal('');
+		chai.expect(out.data).to.have.property('key1');
+		chai.expect(out.data).to.have.property('key2');
+		chai.expect(out.data['key1']).to.deep.equal({ value: 'val1', 'exists': true })
+		chai.expect(out.data['key2']).to.deep.equal({ value: 'val2', 'exists': true })
+	});
+	
 });
 
 

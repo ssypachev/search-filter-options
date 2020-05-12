@@ -7,21 +7,13 @@ const DEFAULT_SIGIL = ':';
 const EMPTY_STRING  = "";
  
 class SearchFilterOptions {
-	
-	static getReader (string) {
-		let str = string, i = 0;
-		return () => {
-			return str.charAt(i++);
-		}
-	}
-	
+
 	fillExtra () {
 		this.out.extra = this.str.substring(this.p, this.anc);
 		this.p = this.anc;
 	}
 
 	fillKey () {
-		this.anc++;
 		let key = this.str.substring(this.p + 1, this.anc);
 		this.curKey = key;
 		this.out.data[this.curKey] = {
@@ -32,7 +24,6 @@ class SearchFilterOptions {
 	}
 	
 	fillValue () {
-		this.anc++;
 		let val = this.str.substring(this.p + 1, this.anc);
 		this.out.data[this.curKey].value = val;
 		this.p = this.anc;
@@ -57,8 +48,31 @@ class SearchFilterOptions {
 		this.sig  = sigil;
 		this.keys = keys;
 		this.trim = !!trim;
-
+		
 		this.reset();
+	}
+	
+	makeExpected () {
+		let out = {};
+		for (let item of this.keys) {
+			out[item.name] = {
+				exists: false,
+				value:  null,
+				flag:   !!item.flag
+			}
+		}
+		return out;
+	}
+	
+	nextClean () {
+		this.p = 0;
+		this.anc = 0;
+		this.curKey = null;
+		this.out.data = {};
+		for (let key of this.keys) {
+			this.out.expected[key.name].exists = false;
+			this.out.expected[key.name].value  = null;
+		}
 	}
 	
 	reset () {
@@ -70,18 +84,12 @@ class SearchFilterOptions {
 		this.p = 0;
 		this.anc = 0;
 		this.curKey = null;
-		for (let item of this.keys) {
-			this.out.expected[item.name] = {
-				exists: false,
-				value:  null,
-				flag:   !!item.flag
-			}
-		}
+		this.out.expected = this.makeExpected();
 	}
 	
 	compare () {
 		for (let [k, v] of Object.entries(this.out.expected)) {
-			if (this.out.data.hasOwnProperty(k)) {
+			if ({}.hasOwnProperty.call(this.out.data, k)) {
 				if (v.flag) {
 					this.out.expected[k].value = true;
 				} else {
@@ -122,13 +130,13 @@ class SearchFilterOptions {
 		if (typeof(str) !== 'string') {
 			throw new TypeError(`SearchFilterOptions.parse error: expected string, but found ${str}`);
 		}
+		this.nextClean();
 		this.str = str;
-		let read = SearchFilterOptions.getReader(this.str);
 		let notFinished = true, c, state = BEFORE;
 		do {
 			switch (state) {
 			case BEFORE:
-				c = read();
+				c = this.str.charAt(this.anc);
 				switch (c) {
 				case EMPTY_STRING:
 					this.fillExtra();
@@ -144,7 +152,7 @@ class SearchFilterOptions {
 				}
 				break;
 			case IN_KEY:
-				c = read();
+				c = this.str.charAt(this.anc);
 				if (c === EMPTY_STRING) {
 					this.fillKey();
 					state = END;
@@ -156,7 +164,7 @@ class SearchFilterOptions {
 				}
 				break;
 			case IN_VALUE:
-				c = read();
+				c = this.str.charAt(this.anc);
 				switch (c) {
 				case EMPTY_STRING:
 					this.fillValue();
